@@ -1,0 +1,7 @@
+﻿@_2PC.Coordinator_HostAddress = http://localhost:5247
+
+GET {{_2PC.Coordinator_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
