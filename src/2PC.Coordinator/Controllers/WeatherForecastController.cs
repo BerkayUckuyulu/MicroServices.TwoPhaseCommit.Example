@@ -1,33 +1,37 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using _2PC.Coordinator.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace _2PC.Coordinator.Controllers;
 
 [ApiController]
-[Route("[controller]")]
 public class WeatherForecastController : ControllerBase
 {
-    private static readonly string[] Summaries = new[]
-    {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
+    private readonly ITransactionService _transactionService;
 
-    private readonly ILogger<WeatherForecastController> _logger;
-
-    public WeatherForecastController(ILogger<WeatherForecastController> logger)
+    public WeatherForecastController(ITransactionService transactionService)
     {
-        _logger = logger;
+        _transactionService = transactionService;
     }
 
-    [HttpGet(Name = "GetWeatherForecast")]
-    public IEnumerable<WeatherForecast> Get()
+    [HttpGet("/start")]
+    public async Task<IActionResult> StartTransaction(List<int>? nodes)
     {
-        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        var transactionId = await _transactionService.CreateTransactionAsync(nodes);
+        await _transactionService.SendControlRequestAsync(transactionId);
+        bool controlState = await _transactionService.CheckServicesControlStatusAsync(transactionId);
+
+        if (!controlState) return BadRequest();
+
+        await _transactionService.CommitAsync(transactionId);
+        bool transactionState = await _transactionService.CheckServicesTransactionStatusAsync(transactionId);
+
+        if (!transactionState)
         {
-            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            TemperatureC = Random.Shared.Next(-20, 55),
-            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-        })
-        .ToArray();
+            await _transactionService.RollBackAsync(transactionId);
+            return BadRequest();
+        }
+
+        return Ok();
     }
 }
 

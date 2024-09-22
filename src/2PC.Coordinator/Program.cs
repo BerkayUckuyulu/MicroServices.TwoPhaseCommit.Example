@@ -1,4 +1,8 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using _2PC.Coordinator.Contexts;
+using _2PC.Coordinator.Services;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
@@ -6,6 +10,11 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddHttpClient();
+builder.Services.AddDbContext<CoordinatorDbContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("SQLServer")));
+
+builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 var app = builder.Build();
 
